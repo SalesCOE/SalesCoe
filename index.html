@@ -1,0 +1,642 @@
+<script>
+// enclose this in script tag and add it to the page --try adding it to header
+
+
+    const Preloader = {
+        show: () => {
+            let spinkitContainer = document.createElement("div")
+            let spinkit = document.createElement("div")
+            spinkit.setAttribute("class", "sk-circle")
+            for (let i = 1; i <= 12; i++) {
+                let circle = document.createElement("div")
+                circle.setAttribute("class", `sk-circle${i} sk-child`)
+                spinkit.appendChild(circle)
+            }
+            spinkitContainer.setAttribute("id", "spinkit")
+            spinkitContainer.setAttribute("class", "overlay-container")
+            spinkitContainer.insertAdjacentElement("afterbegin", spinkit)
+            document.querySelector(".oda-chat-header").insertAdjacentElement("afterend", spinkitContainer)
+
+        },
+        hide: () => {
+            document.getElementById("spinkit").remove()
+        }
+    }
+
+const ModalPopup = {
+    show: (url, title) => {
+        document.body.insertAdjacentHTML("beforeend", `<div class="cb-popup-bg"><div class="cb-popup my-popup-1"><div class="cb-popup-header cb-title">${title}</div><div class="cb-popup-body"><iframe id="cb-webview-popup" frameborder="0" style="width: 100%;height:100%;"></iframe></div></div></div>`)
+        document.querySelector(".cb-popup").style.display = "unset"
+        document.querySelector(".cb-popup-bg").style.display = "unset"
+        document.getElementById("cb-webview-popup").setAttribute("src", url)    
+    },
+    hide: () =>{
+        document.querySelector(".cb-popup-bg").remove()
+    }
+}
+
+
+var chatSettings = {
+	URI: 'idcs-oda-218b5709098a412cb71c79992af496cb-s0.data.digitalassistant.oci.oc-test.com',
+	channelId: '70f99f91-cae6-48c7-ae45-529d2ccca2ad',//'36c9cb62-94b9-4bda-91f9-6ddb45946fbb', //test - //'',
+	initUserHiddenMessage: 'Hi',
+	enableClearMessage: true,
+    // enableAutocomplete: true,
+    // enableAutocompleteClientCache: true,
+	logoIcon: "https://objectstorage.us-ashburn-1.oraclecloud.com/n/myconcierge/b/salescoebot/o/ACN%20logo%20png.png", // banner
+	botIcon: "https://objectstorage.us-ashburn-1.oraclecloud.com/n/myconcierge/b/salescoebot/o/salesavatar.png", // chatbot Profile_Picture local directory link --need to update this depending on the in.accenture.com/oracle media uploads
+	openChatOnLoad: true,
+	font: '14px "Helvetica Neue", Helvetica, Arial, sans-serif',
+	height: '830px', // this can be adjusted depending on the size of the page --chatbot height
+	width: '425px', // this can be adjusted depending on the size of the page --chatbot width
+	colors: {
+		actionsBackground: "d000ff"
+	}
+};
+
+function initSdk(name) {
+	// Default name is Bots
+	
+	if (!name) {
+		name = 'Bots';
+	}
+	setTimeout(() => {
+		const Bots = new WebSDK(chatSettings); // Initiate library with configuration
+		Bots.connect()                         // Connect to server
+			.then(() => {
+				console.log("Connection Successful");		
+                Bots.setDelegate({
+                    beforeDisplay(message) {
+                        console.log(JSON.stringify(message, null, 4))
+                         if (message.messagePayload && message.messagePayload.cards
+                            && message.messagePayload.cards[0].actions
+                            && (message.messagePayload.cards[0].actions[0].label == "topTicketService" 
+                            || message.messagePayload.cards[0].actions[0].label == "masterTrackerService"
+                            || message.messagePayload.cards[0].actions[0].label == "credentialDashboardAnalytics"
+                            || message.messagePayload.cards[0].actions[0].label == "capabilityDashboardService"
+                            || message.messagePayload.cards[0].actions[0].label == "findExperts" )) {
+                        // Inline -------------------> 
+                            let url = message.messagePayload.cards[0].actions[0].url;
+                            console.log("message:" + JSON.stringify(message, null, 4))
+
+                             if (message.messagePayload.cards[0].actions[0].label == "topTicketService" 
+                             || message.messagePayload.cards[0].actions[0].label == "masterTrackerService" 
+                             || message.messagePayload.cards[0].actions[0].label =="credentialDashboardAnalytics" 
+                             || message.messagePayload.cards[0].actions[0].label == "capabilityDashboardService"
+                             || message.messagePayload.cards[0].actions[0].label == "findExperts" ) {
+                        // Modal --------------------> 
+                                 ModalPopup.show(url, message.messagePayload.cards[0].title)
+                             }else{
+                                 Preloader.show()
+                                 let webview = document.createElement("div")
+                                 webview.setAttribute("id", "webviewInline")
+                                 webview.setAttribute("style", "background: white;z-index: 5000;position: relative;height: 100%;")
+                                 document.querySelector(".oda-chat-conversation").insertAdjacentElement("afterend", webview)
+                                 let iframe = document.createElement("iframe")
+
+                                 iframe.setAttribute("src", url)
+                                 iframe.setAttribute("frameborder", 0)
+                                 iframe.setAttribute("id", "iframe-login")
+                                 iframe.setAttribute("style", "width: 100%; height: 100%")
+                                 webview.insertAdjacentElement("beforeend", iframe)
+                                 iframe.onload = function () {
+                                     setTimeout(() => {
+                                         Preloader.hide()
+                                     }, 500);
+                                 }
+                                 document.querySelector(".oda-chat-footer").style.display = "none"
+                                //  document.querySelector(".oda-chat-embed-sticky-top").style.display = "none"
+                             }
+                             return false
+                        } else if (message.messagePayload.channelExtensions  // closing the webview
+                            && message.messagePayload.channelExtensions.webviewAction) {
+                            if (message.messagePayload.channelExtensions.webviewAction === "close") {
+                                if (document.getElementById("webviewInline")) {
+                                    console.log("close webview")
+                                    document.getElementById("webviewInline").remove()
+                                    document.querySelector(".oda-chat-footer").style.display = "block"
+                                    // document.querySelector(".oda-chat-embed-sticky-top").style.display = "block"
+                                } else if (document.getElementById("cb-webview-popup")) {
+                                    ModalPopup.hide()
+                                }
+                            }
+                            return false
+
+                        } else if (message.messagePayload.channelExtensions
+                             && message.messagePayload.channelExtensions.showMenu) {
+                             document.getElementById("iframe-login").remove()
+                             profile = message.messagePayload.channelExtensions.profile
+                             document.querySelector(".header-chat-response").innerHTML = currentMsgLang.welcome.replace("{1}", profile) //`Welcome back <span class="bot-name">${message.messagePayload.channelExtensions.profile}</span>! A sunny morning to you.<br/><br/>So where do you want to start?`
+                             document.querySelector(".header-chat-response").setAttribute("data-translateKey", "welcome")
+                             console.log(currentMsgLang)
+                             let menusArray = [{ id: "hcm", title: currentMsgLang.hcm, description: currentMsgLang.hcmDescription, image: "personal-information_.svg", "openUtterance": "ask HCM skill to open my HCM" },
+                             { id: "erp", title: currentMsgLang.erp, description: currentMsgLang.erpDescription, image: "myERP_icon_.svg", "openUtterance": "ask ERP skill to open my ERP" },
+                             { id: "cx", title: currentMsgLang.cx, description: currentMsgLang.cxDescription, image: "myCX_icon_.svg", "openUtterance": "open my CX" }
+                             ]
+                             let menus = customUIHeader.innerHTML;
+                             menusArray.forEach(el => {
+                                 menus += `<button class="menu-button" id=${el.id} onclick="selectMenu('${el.openUtterance}')"><div class="menu" ><img src="${imageURL}/${el.image}"><p><span class="menu-title" data-translateKey = "${el.id}" >${el.title}</span><br/><span data-translateKey = "${el.id}Description">${el.description}</span></p></div></button>`
+                             })
+
+                             customUIHeader.innerHTML = menus
+                             return false
+
+                         }else{
+                            return message
+                        }
+                    }
+                })						
+			})
+			.catch((reason) => {
+				console.log("Connection failed");
+				console.log(reason);
+			});
+		window[name] = Bots;
+	});
+}
+
+
+</script>
+<style>
+.oda-chat-widget{
+    box-shadow: 0px 4px 10px #bb95d2;
+}
+
+.oda-chat-wrapper *{
+    font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+}
+.oda-chat-wrapper .oda-chat-widget{
+  border-radius:  15px;
+  border: 2px solid rgb(204, 204, 204);
+  
+}
+
+.oda-chat-wrapper .oda-chat-header {
+    background: #A053D9;
+    height: 60px;
+    margin: -5px;
+    z-index: 100;
+    border-bottom: 1px #A053D9 dashed;
+}
+.oda-chat-wrapper .oda-chat-title {
+    color: #ffffff;
+}
+.oda-chat-wrapper .oda-chat-conversation .oda-chat-conversation-pane{
+    background: white;
+}
+
+.oda-chat-wrapper .oda-chat-header .oda-chat-button-close svg{
+    background:   transparent
+}
+
+
+.oda-chat-wrapper .oda-chat-header .oda-chat-button-close:hover{
+    filter:brightness(1);
+}
+
+.oda-chat-wrapper .oda-chat-footer{
+    background: white;
+    border-top: 1px solid  rgb(204, 204, 204);
+    display: flex;
+}
+
+.oda-chat-wrapper .oda-chat-footer .oda-chat-user-input{
+    border:none
+}
+
+.oda-chat-wrapper .oda-chat-header-button-img-icon{
+    max-height: 16px;
+    max-width: 16px;
+}
+
+.oda-chat-wrapper .oda-chat-header-button{
+    background: transparent;
+}
+
+.oda-chat-wrapper .oda-chat-card-image{
+    height: 140px;
+    max-width: 100%;
+    width: 250px;
+    max-height: 100%;
+}
+.oda-chat-card-message-horizontal .oda-chat-card:first-of-type {
+    border-radius: 0px 20px 20px 20px;
+
+}
+.oda-chat-wrapper .oda-chat-card-message-horizontal .oda-chat-card{
+    justify-content: flex-start !important;
+    align-self: flex-start !important;
+    scroll-snap-align: center;
+    /*box-shadow: 2px 3px 8px -3px rgb(0 0 0 / 20%);*/
+    margin: 7px;
+    width: 250px;
+}
+.oda-chat-wrapper .oda-chat-card{
+    padding: 0px;
+    border-radius: 20px 20px 20px 20px;
+    border-color: #E0E0E0;
+    background: #ecf2f8;
+}
+.oda-chat-wrapper .oda-chat-card-description{
+    padding: 7px 14px;
+    font-size: 14px;
+    margin: 1px;
+}
+
+.oda-chat-wrapper .oda-chat-card-title{
+    font-weight: 700;
+    margin: 1px;
+    padding: 9px 14px 1px;
+}
+.oda-chat-wrapper .oda-chat-card-actions .oda-chat-action-postback {
+    margin: 0px;
+    border-color: transparent;
+    border-radius: 0px;
+    border-top: 1px solid #f2f2f2;
+    padding: 10px 12px;
+    background-color: white; /* #0099ff;*/
+    color: #2c59a7;
+    font-size: 14px;
+}
+.oda-chat-wrapper .oda-chat-card-actions .oda-chat-action-postback:hover:enabled, .oda-chat-wrapper .oda-chat-message-global-actions .oda-chat-action-postback:hover:enabled, .oda-chat-wrapper .oda-chat-message-actions .oda-chat-action-postback:hover:enabled, .oda-chat-wrapper .oda-chat-round:hover:enabled {
+    background-color: #451767;
+    color: white;
+}
+.oda-chat-wrapper .oda-chat-message-global-actions .oda-chat-action-postback{
+    margin-left: 3px;
+    padding: 7px;
+    border-radius: 7px;
+    border-color: #451767;
+    flex: none;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+    background-color: transparent;
+    color: #451767;
+    
+    min-width: 50px;
+    font-size: 14px;
+}
+
+.oda-chat-wrapper .oda-chat-card-actions button.oda-chat-disabled {
+    color: #737373;
+    background: #ffffff;
+    border-top-color: #c5c5c5;
+} 
+.oda-chat-wrapper .oda-chat-message-global-actions{
+    margin-top: 7px;
+    display: flex;
+}
+
+.oda-chat-wrapper .oda-chat-round:focus:enabled,
+.oda-chat-wrapper .oda-chat-round:focus:enabled svg {
+    background: #DDC3FA;
+    fill: white;
+}
+.oda-chat-wrapper .oda-chat-next{
+    border-radius: 0px 7px 7px 0px;
+    background: #b3e0ff;
+    border: 1px solid #5c7db8;
+    height: 28px;
+}
+.oda-chat-wrapper .oda-chat-previous{
+    border-radius: 7px 0px 0px 7px;
+    background: #b3e0ff;
+    height: 28px;
+    border: 1px solid #5c7db8;
+}
+.oda-chat-wrapper .oda-chat-round svg{
+    fill: #5c7db8;
+}
+.oda-chat-wrapper .oda-chat-round{
+    top: calc(50% - 29px);
+    background-color: #bdd6ec;
+}
+
+.oda-chat-wrapper .oda-chat-message-actions .oda-chat-action-postback {
+    border-radius: 7px;
+    background-color: #bdd6ec;
+    border-color: #9cc2e2;
+    color: #5c7db8;
+    font-size: 14px;
+    padding: 8px 15px;
+    margin: 3px;
+}
+.oda-chat-wrapper .oda-chat-message-bubble{
+    margin-bottom: 8px;
+    padding: 10px 20px;
+    margin-bottom: 6px;
+    margin-top: 1px;
+}
+.oda-chat-wrapper .oda-chat-right .oda-chat-message-bubble {
+    color: white;
+    background: #A053D9;
+    border: 1px solid #E0E0E0;
+    font-size: 15px;
+    border-radius: 20px 20px 0 20px;
+    /*box-shadow: -1px 3px 8px -3px rgb(0 0 0 / 20%);*/
+}
+.oda-chat-wrapper .oda-chat-left .oda-chat-message-bubble {
+    color: #212121;
+    background: #f2ecf8;
+    border: 1px solid #E0E0E0;
+    font-size: 15px;
+    border-radius: 0px 20px 20px 20px;
+    /*box-shadow: 2px 3px 8px -3px rgb(118, 146, 177);*/
+}
+.oda-chat-round:hover:enabled {
+    background-color: #DDC3FA;
+}
+
+.oda-chat-round:focus:enabled {
+    background-color: #DDC3FA;
+}
+.oda-chat-wrapper .oda-chat-round {
+    top: calc(50% - 29px);
+    background-color: #DDC3FA;
+}
+.oda-chat-wrapper .oda-chat-next {
+    border-radius: 0px 7px 7px 0px;
+    background: #DDC3FA;
+    border: 1px solid #451767;
+    height: 28px;
+}
+.oda-chat-wrapper .oda-chat-message-actions .oda-chat-action-postback {
+    border-radius: 7px;
+    background-color: #DDC3FA;
+    border-color: #A053D9;
+    color: #451767;
+    font-size: 14px;
+    padding: 8px 15px;
+    margin: 3px;
+}
+.oda-chat-wrapper .oda-chat-message-global-actions .oda-chat-action-postback {
+    margin-left: 3px;
+    padding: 7px;
+    border-radius: 7px;
+    border-color: #a15ce5;
+    flex: none;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+    background-color: transparent;
+    color: #a15ce5;
+    min-width: 50px;
+    font-size: 14px;
+    text-align: left;
+}
+.oda-chat-wrapper .oda-chat-card-actions .oda-chat-action-postback {
+    margin: 0px;
+    border-color: transparent;
+    border-radius: 0px;
+    border-top: 1px solid #f2f2f2;
+    padding: 10px 12px;
+    background-color: white;
+    color: #451767;
+    font-size: 14px;
+}
+.oda-chat-card-title {
+    font-weight: 400;
+    margin: 4px;
+    max-width: 100%;
+    text-align: center;
+    white-space: pre-wrap;
+    background-color: #ebe6ec;
+}
+.oda-chat-card-description {
+    font-weight: 400;
+    max-width: 100%;
+    margin: 4px;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: pre-wrap;
+    background-color: white;
+}
+.oda-chat-wrapper .oda-chat-round svg {
+    fill: #A053D9;
+}
+.oda-chat-wrapper .oda-chat-previous {
+    border-radius: 7px 0px 0px 7px;
+    background: #DDC3FA;
+    height: 28px;
+    border: 1px solid #451767;
+}
+.oda-chat-wrapper .oda-chat-message-global-actions .oda-chat-action-postback {
+    margin-left: 3px;
+    padding: 7px;
+    border-radius: 7px;
+    border-color: #451767;
+    flex: none;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+    background-color: transparent;
+    color: #451767;
+    min-width: 50px;
+    font-size: 14px;
+}
+.oda-chat-message-global-actions {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+}
+@media (min-width: 200px ) and (max-width: 550px){   
+    .oda-chat-wrapper .oda-chat-widget {
+        bottom: -20px;
+        height: 100%;/*calc(100vh - calc(100vh - 100%));*/
+        max-height: 100%;/*calc(100vh - calc(100vh - 100%));*/
+        max-width: 100vw;
+        right: -10px;
+        width: 100vw;
+        transition: all 0.25s ease-in-out;
+        border-radius:  0px !important;
+    }
+  
+}
+button.oda-chat-action-url.oda-chat-action-postback {
+    background-color: #DDC3FA !important;
+    border-color: #A053D9 !important;
+    color: #451767 !important;
+    font-size: 14px !important;
+    padding: 8px 15px !important;
+    margin: 3px !important
+ 
+	}
+button.oda-chat-action-url.oda-chat-action-postback:hover:enabled {
+    background-color: #451767 !important;
+    color: white!important;
+}
+
+
+/********************************************************************
+* POPUP
+**********************************************************************/
+.cb-popup {
+    /*   musthave style */
+        position:fixed;
+        left: 0;
+        top: 1%;
+        bottom: 20%;
+        right: 0;
+        width: 645px;
+        height: 600px;
+        z-index:2;
+        margin:0 auto;
+       /*   custom style */
+        background: #fff;
+        /*padding: 30px;*/
+        border-radius: 14px;
+    /*   hide element */
+          display:none;
+    }
+    /* close popup element */
+    /*
+    .cb-popup-close {
+      position: absolute;
+      top: 5px;
+      right:10px;
+
+      cursor:default;
+      color:red;
+      font-size:18px;
+    }
+    */
+    /*class for parent popup */
+    .cb-popup-bg {
+        display: none;
+        position: fixed;
+        background: rgba(0, 0, 0, 0.4);
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20000;
+        
+    }
+    .cb-popup-body{
+        padding: 2%;
+        height: 90%;
+
+    }
+
+    .cb-popup-header{
+        padding-left: 5px;
+        background: #A053D9;
+        border-radius: 14px 14px 0 0;
+        color: #ffffff;
+        font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+        height: 6%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+    }
+
+    @keyframes slide-in {
+        0% {
+            opacity: 0;
+            -webkit-transform: translate(0, 60px);
+            transform: translate(0, 60px);
+        }
+
+        100%{
+            opacity: 1;
+            -webkit-transform: translate(0, 0);
+             transform: translate(0, 0);
+        }
+    }
+    @keyframes slide-out {
+        0% {
+            opacity: 1;
+            -webkit-transform: translate(0, 0);
+            transform: translate(0, 0);
+        }
+
+        100%{
+            opacity: 0;
+            -webkit-transform: translate(0, 50px);  
+            transform: translate(0, 50px);
+        }
+    } 
+    .cb-boticon-message{
+        font-family: 'Calibri', 'Gill Sans', 'Gill Sans MT';
+        background:#2c59a7;
+        color:white;
+        border-radius: 10px;
+        width: 15%; 
+        padding: 2px 5px 15px 15px;
+        position: fixed;
+        bottom: 110px;
+        right: 70px;
+        z-index: 20000;
+        box-shadow: 1px 1px 5px gray;
+        animation: slide-in 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) 0.1s both;
+    }
+    .cb-boticon-message p{
+        margin: 0px
+    }
+    .cb-boticon-message-close{
+        text-align: right;
+        margin-bottom: 5px;
+
+    }
+    .cb-boticon-message-close button{
+       border:none;
+       background:#1c4488;
+       color:white; 
+       border-radius: 8px;
+    }
+    .cb-boticon-message-close button:hover{
+        color: rgb(140, 228, 7);
+        cursor: pointer;
+
+    }
+
+    .cb-close-menu-btn{
+        height: 30px;
+        width: 30px;
+        margin: 20% auto 0px auto;
+        border-radius: 50%;
+        border: 1px solid #bdbdbd;
+        /*padding: 9px;*/
+        cursor: pointer;
+        background: url("https://objectstorage.us-ashburn-1.oraclecloud.com/n/myconcierge/b/cdn/o/custom-ui-blue/images/up-arrow.svg") no-repeat;
+        
+    }
+
+/* HOVER */
+
+.dropbtnn {
+    background-color: transparent;
+    color: white;
+    border: none;
+}
+
+.dropdownn {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-contentt {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-contentt a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-contentt a:hover {background-color: #ddd;}
+
+.dropdownn:hover .dropdown-contentt {display: block;}
+
+.dropdownn:hover .dropbtnn {background-color: #3e8e41;}
+</style>
+
+<script src="https://objectstorage.us-ashburn-1.oraclecloud.com/n/myconcierge/b/salescoebot/o/web-sdk.js" onload="initSdk('Bots')"></script>
