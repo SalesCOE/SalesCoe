@@ -75,7 +75,8 @@ function initSdk(name) {
                             || message.messagePayload.cards[0].actions[0].label == "credentialDashboardAnalytics"
                             || message.messagePayload.cards[0].actions[0].label == "capabilityDashboardService"
                             || message.messagePayload.cards[0].actions[0].label == "findExperts"
-                            || message.messagePayload.cards[0].actions[0].label == "findExpertsTable" )) {
+                            || message.messagePayload.cards[0].actions[0].label == "findExpertsTable"
+                            || message.messagePayload.cards[0].actions[0].label == "ticketNumbersService" )) {
                         // Inline -------------------> 
                             let url = message.messagePayload.cards[0].actions[0].url;
                             console.log("message:" + JSON.stringify(message, null, 4))
@@ -85,7 +86,8 @@ function initSdk(name) {
                              || message.messagePayload.cards[0].actions[0].label =="credentialDashboardAnalytics" 
                              || message.messagePayload.cards[0].actions[0].label == "capabilityDashboardService"
                              || message.messagePayload.cards[0].actions[0].label == "findExperts"
-                             || message.messagePayload.cards[0].actions[0].label == "findExpertsTable" ) {
+                             || message.messagePayload.cards[0].actions[0].label == "findExpertsTable"
+                             || message.messagePayload.cards[0].actions[0].label == "ticketNumbersService" ) {
                         // Modal --------------------> 
                                  ModalPopup.show(url, message.messagePayload.cards[0].title)
                              }else{
